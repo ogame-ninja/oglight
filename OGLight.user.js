@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         OGLight
+// @name         OGLight Ninja
 // @namespace    https://openuserjs.org/users/nullNaN
 // @version      5.0.2
 // @description  OGLight script for OGame
@@ -7,6 +7,8 @@
 // @license      MIT
 // @copyright    2019, Oz
 // @match        https://*.ogame.gameforge.com/game/*
+// @match        *127.0.0.1*/bots/*/browser/html/*?page=*
+// @match        *.ogame.ninja/bots/*/browser/html/*?page=*
 // @updateURL    https://openuserjs.org/meta/nullNaN/OGLight.meta.js
 // @downloadURL  https://openuserjs.org/install/nullNaN/OGLight.user.js
 // @grant        GM_addStyle
@@ -18,6 +20,12 @@
 // @run-at       document-start
 // ==/UserScript==
 'use strict';
+
+const universeNum = /browser\/html\/s(\d+)-(\w+)/.exec(window.location.href)[1];
+const lang = /browser\/html\/s(\d+)-(\w+)/.exec(window.location.href)[2];
+const UNIVERSE = "s" + universeNum + "-" + lang;
+const PROTOCOL = window.location.protocol;
+const HOST = window.location.host;
 
 // redirect user if needed
 const oglRedirection = localStorage.getItem('ogl-redirect');
@@ -99,8 +107,7 @@ class OGLight
     constructor(params)
     {
         // get the account ID in cookies
-        const cookieAccounts = document.cookie.match(/prsess\_([0-9]+)=/g);
-        const accountID = cookieAccounts[cookieAccounts.length-1].replace(/\D/g, '');
+        const accountID = document.querySelector('head meta[name="ogame-player-id"]').getAttribute('content').replace(/\D/g, '');
 
         //console.log(Util.hash('test'))
 
@@ -237,7 +244,7 @@ class OGLight
         this.flagsList = ['friend', 'rush', 'danger', 'skull', 'fridge', 'star', 'trade', 'money', 'ptre', 'none'];
 
         this.server = {};
-        this.server.id = window.location.host.replace(/\D/g,'');
+        this.server.id = document.querySelector('head meta[name="ogame-universe"]').getAttribute('content').replace(/\D/g,'');
         this.server.name = document.querySelector('head meta[name="ogame-universe-name"]').getAttribute('content');
         this.server.lang = document.querySelector('head meta[name="ogame-language"]').getAttribute('content');
         this.server.economySpeed = parseInt(document.querySelector('head meta[name="ogame-universe-speed"]').getAttribute('content'));
@@ -252,7 +259,7 @@ class OGLight
         this.account.class = document.querySelector('#characterclass .sprite')?.classList.contains('miner') ? 1 : document.querySelector('#characterclass .sprite')?.classList.contains('warrior') ? 2 : 3;
         this.account.name = document.querySelector('head meta[name="ogame-player-name"]').getAttribute('content');
         this.account.rank = document.querySelector('#bar a[href*="searchRelId"]')?.parentNode.innerText.replace(/\D/g, '');
-        this.account.lang = /oglocale=([a-z]+);/.exec(document.cookie)[1];
+        this.account.lang = lang;
 
         this.db.serverData = this.db.serverData || {};
         this.db.serverData.serverTimeZoneOffsetInMinutes = unsafeWindow.serverTimeZoneOffsetInMinutes === 0 ? 0 : (unsafeWindow.serverTimeZoneOffsetInMinutes || this.db.serverData.serverTimeZoneOffsetInMinutes || 0);
@@ -275,7 +282,7 @@ class OGLight
 
         if(this.account.lang != this.db.userLang && this.page != 'fleetdispatch' && this.page != 'intro')
         {
-            window.location.href = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch`;
+            window.location.href = `?page=ingame&component=fleetdispatch`;
             return;
         }
         else if (this.page != 'intro')
@@ -293,7 +300,10 @@ class OGLight
             // generate a new id
             if(!this.id || !this.id[0])
             {
-                let uuid = [crypto.randomUUID(), 0];
+                let uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
                 GM_setValue('ogl_id', uuid);
                 this.id == uuid;
             }
@@ -425,7 +435,7 @@ class OGLight
         {
             this._fetch.pending.push(
             {
-                url:`https://${window.location.host}/api/serverData.xml`,
+                url:`${PROTOCOL}//${HOST}/api/s${universeNum}/${lang}/serverData.xml`,
                 callback:data =>
                 {
                     let xml = new DOMParser().parseFromString(data, 'text/html');
@@ -1395,7 +1405,7 @@ class FetchManager extends Manager
 
         for(let i=0; i<=1; i++)
         {
-            fetch(`https://${window.location.host}/game/index.php?page=ajax&component=empire&ajax=1&planetType=${i}&asJson=1`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            fetch(`?page=ajax&component=empire&ajax=1&planetType=${i}&asJson=1`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(response => response.json())
             .then(result =>
             {
@@ -1410,7 +1420,7 @@ class FetchManager extends Manager
     {
         this.ogl._topbar.syncBtn.classList.add('ogl_active');
 
-        fetch(`https://${window.location.host}/game/index.php?page=ajax&component=lfbonuses`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        fetch(`?page=ajax&component=lfbonuses`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(response => response.text())
         .then(result =>
         {
@@ -1434,7 +1444,7 @@ class FetchManager extends Manager
         {
             this.pending.push(
             {
-                url:`https://${window.location.host}/api/playerData.xml?id=${player.uid}`,
+                url:`${PROTOCOL}//${HOST}/api/s${universeNum}/${lang}/playerData.xml?id=${player.uid}`,
                 callback:data =>
                 {
                     const xml = new DOMParser().parseFromString(data, 'text/html');
@@ -1658,7 +1668,7 @@ class UIManager extends Manager
                     }
                     else
                     {
-                        const url = `https://${window.location.host}/game/index.php?page=ingame&component=galaxy&galaxy=${coords[0]}&system=${coords[1]}`;
+                        const url = `?page=ingame&component=galaxy&galaxy=${coords[0]}&system=${coords[1]}`;
                         if(event.ctrlKey) window.open(url, '_blank');
                         else window.location.href = url;
                     }
@@ -1676,7 +1686,7 @@ class UIManager extends Manager
 
                         if(document.body.classList.contains('ogl_initHarvest'))
                         {
-                            window.location.href = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&galaxy=${coords[0]}&system=${coords[1]}&position=${coords[2]}&type=${type}&oglmode=1`;
+                            window.location.href = `?page=ingame&component=fleetdispatch&galaxy=${coords[0]}&system=${coords[1]}&position=${coords[2]}&type=${type}&oglmode=1`;
                         }
                         else
                         {
@@ -2058,7 +2068,7 @@ class UIManager extends Manager
         {
             class:'ogl_playerData' ,
             child:`
-            <h1 class="${player.status || 'status_abbr_active'}">${player.name} <a href="https://${window.location.host}/game/index.php?page=highscore&site=${page}&searchRelId=${id}">#${player.score.globalRanking}</a></h1>
+            <h1 class="${player.status || 'status_abbr_active'}">${player.name} <a href="?page=highscore&site=${page}&searchRelId=${id}">#${player.score.globalRanking}</a></h1>
             <div class="ogl_grid">
                 <div class="ogl_leftSide">
                     <div class="ogl_actions"></div>
@@ -2081,7 +2091,7 @@ class UIManager extends Manager
         {
             if(!document.querySelector('#chatBar'))
             {
-                window.location.href = `https://${window.location.host}/game/index.php?page=chat&playerId=${player.uid}`;
+                window.location.href = `?page=chat&playerId=${player.uid}`;
             }
         }});
 
@@ -2092,7 +2102,7 @@ class UIManager extends Manager
         }
 
         // buddy
-        Util.addDom('a', { child:'account-plus', class:'material-icons ogl_button overlay', parent:container.querySelector('.ogl_actions'), href:`https://${window.location.host}/game/index.php?page=ingame&component=buddies&action=7&id=${player.uid}&ajax=1`, onclick:() =>
+        Util.addDom('a', { child:'account-plus', class:'material-icons ogl_button overlay', parent:container.querySelector('.ogl_actions'), href:`?page=ingame&component=buddies&action=7&id=${player.uid}&ajax=1`, onclick:() =>
         {
             this.ogl._tooltip.close();
         }});
@@ -2100,7 +2110,7 @@ class UIManager extends Manager
         // ignore
         Util.addDom('div', { child:'block', class:'material-icons ogl_button', parent:container.querySelector('.ogl_actions'), onclick:() =>
         {
-            window.location.href = `https://${window.location.host}/game/index.php?page=ignorelist&action=1&id=${player.uid}`;
+            window.location.href = `?page=ignorelist&action=1&id=${player.uid}`;
         }});
 
         // mmorpgstat
@@ -2447,7 +2457,7 @@ class UIManager extends Manager
         {
             this.ogl._fetch.pending.push(
             {
-                url:`https://${window.location.host}/api/players.xml`,
+                url:`${PROTOCOL}//${HOST}/api/s${universeNum}/${lang}/players.xml`,
                 callback:data =>
                 {
                     console.log('ranking status fetched');
@@ -2674,12 +2684,12 @@ class TopbarManager extends Manager
         {
             if(this.ogl.currentPlanet.obj.planetID || this.ogl.currentPlanet.obj.moonID)
             {
-                window.location.href = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&oglmode=2`;
+                window.location.href = `?page=ingame&component=fleetdispatch&oglmode=2`;
             }
             else
             {
                 let nextID = this.ogl.planetType == 'planet' ? this.ogl.currentPlanet.dom.nextWithMoon.getAttribute('id').replace('planet-', '') : this.ogl.currentPlanet.dom.nextWithMoon.querySelector('.moonlink').getAttribute('href').match(/cp=(\d+)/)[1];
-                window.location.href = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&cp=${nextID}&oglmode=2`;
+                window.location.href = `?page=ingame&component=fleetdispatch&cp=${nextID}&oglmode=2`;
             }
         }});
     }
@@ -3292,7 +3302,7 @@ class TopbarManager extends Manager
         this.ogl._ui.turnIntoPlayerLink(player.uid, playerDiv);
 
         const page = Math.max(1, Math.ceil((player.score?.globalRanking || 100) / 100));
-        const rankLink = Util.addDom('a', { class:'ogl_ranking', href:`https://${window.location.host}/game/index.php?page=highscore&site=${page}&searchRelId=${player.uid}`, child:'#'+player.score?.globalRanking || '?' });
+        const rankLink = Util.addDom('a', { class:'ogl_ranking', href:`?page=highscore&site=${page}&searchRelId=${player.uid}`, child:'#'+player.score?.globalRanking || '?' });
 
         Util.addDom('div', { parent:item, child:rankLink.outerHTML });
         this.ogl._ui.addPinButton(item, player.uid);
@@ -3331,7 +3341,7 @@ class TopbarManager extends Manager
             {
                 if(!document.querySelector('#chatBar'))
                 {
-                    window.location.href = `https://${window.location.host}/game/index.php?page=chat&playerId=${id}`;
+                    window.location.href = `?page=chat&playerId=${id}`;
                 }
             }});
 
@@ -3342,7 +3352,7 @@ class TopbarManager extends Manager
             }
 
             // buddy
-            Util.addDom('a', { child:'account-plus', class:'material-icons ogl_button overlay', parent:container.querySelector('.ogl_actions'), href:`https://${window.location.host}/game/index.php?page=ingame&component=buddies&action=7&id=${id}&ajax=1`, onclick:() =>
+            Util.addDom('a', { child:'account-plus', class:'material-icons ogl_button overlay', parent:container.querySelector('.ogl_actions'), href:`?page=ingame&component=buddies&action=7&id=${id}&ajax=1`, onclick:() =>
             {
                 this.ogl._tooltip.close();
             }});
@@ -3350,7 +3360,7 @@ class TopbarManager extends Manager
             // ignore
             Util.addDom('div', { child:'block', class:'material-icons ogl_button', parent:actions, onclick:() =>
             {
-                window.location.href = `https://${window.location.host}/game/index.php?page=ignorelist&action=1&id=${id}`;
+                window.location.href = `?page=ignorelist&action=1&id=${id}`;
             }});
 
             // mmorpgstat
@@ -3381,7 +3391,7 @@ class TopbarManager extends Manager
             }
     
             const page = Math.max(1, Math.ceil((player.score?.globalRanking || 100) / 100));
-            const rankLink = Util.addDom('a', { class:'ogl_ranking', href:`https://${window.location.host}/game/index.php?page=highscore&site=${page}&searchRelId=${player.uid}`, child:'#'+player.score?.globalRanking || '?' });
+            const rankLink = Util.addDom('a', { class:'ogl_ranking', href:`?page=highscore&site=${page}&searchRelId=${player.uid}`, child:'#'+player.score?.globalRanking || '?' });
 
             title.innerHTML = `${player.name} ${rankLink.outerHTML}`;
 
@@ -4347,7 +4357,7 @@ class FleetManager extends Manager
         {
             let messageId = parseInt(new URLSearchParams(window.location.search).get('oglmsg')) || 0;
             if(this.ogl.cache.reports[messageId]) this.ogl.cache.reports[messageId].attacked = true;
-            window.location.href = `https://${window.location.host}/game/index.php?page=messages`;
+            window.location.href = `?page=messages`;
         }
         else
         {
@@ -4712,30 +4722,30 @@ class FleetManager extends Manager
                 nextID = this.ogl.db.harvestCoords?.source?.type == 1 ? this.ogl.currentPlanet.dom.nextNext.getAttribute('id').replace('planet-', '') : this.ogl.currentPlanet.dom.nextNextWithMoon.querySelector('.moonlink').getAttribute('href').match(/cp=(\d+)/)[1];
             }
 
-            this.ogl.prevRedirection = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&cp=${prevID}&galaxy=${coords[0]}&system=${coords[1]}&position=${coords[2]}&type=${type}&oglmode=1`;
-            this.ogl.nextRedirection = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&cp=${nextID}&galaxy=${coords[0]}&system=${coords[1]}&position=${coords[2]}&type=${type}&oglmode=1`;
+            this.ogl.prevRedirection = `?page=ingame&component=fleetdispatch&cp=${prevID}&galaxy=${coords[0]}&system=${coords[1]}&position=${coords[2]}&type=${type}&oglmode=1`;
+            this.ogl.nextRedirection = `?page=ingame&component=fleetdispatch&cp=${nextID}&galaxy=${coords[0]}&system=${coords[1]}&position=${coords[2]}&type=${type}&oglmode=1`;
         }
         else if(this.ogl.mode === 2)
         {
             prevID = this.ogl.db.harvestCoords?.source?.type == 1 ? this.ogl.currentPlanet.dom.prevWithMoon.getAttribute('id').replace('planet-', '') : this.ogl.currentPlanet.dom.prevWithMoon.querySelector('.moonlink').getAttribute('href').match(/cp=(\d+)/)[1];
             nextID = this.ogl.db.harvestCoords?.source?.type == 1 ? this.ogl.currentPlanet.dom.nextWithMoon.getAttribute('id').replace('planet-', '') : this.ogl.currentPlanet.dom.nextWithMoon.querySelector('.moonlink').getAttribute('href').match(/cp=(\d+)/)[1];
         
-            this.ogl.prevRedirection = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&cp=${prevID}&oglmode=2`;
-            this.ogl.nextRedirection = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&cp=${nextID}&oglmode=2`;
+            this.ogl.prevRedirection = `?page=ingame&component=fleetdispatch&cp=${prevID}&oglmode=2`;
+            this.ogl.nextRedirection = `?page=ingame&component=fleetdispatch&cp=${nextID}&oglmode=2`;
         }
         else if(this.ogl.mode === 5)
         {
             prevID = this.ogl.db.harvestCoords?.source?.type == 1 ? this.ogl.currentPlanet.dom.prev.getAttribute('id').replace('planet-', '') : this.ogl.currentPlanet.dom.prevWithMoon.querySelector('.moonlink').getAttribute('href').match(/cp=(\d+)/)[1];
             nextID = this.ogl.db.harvestCoords?.source?.type == 1 ? this.ogl.currentPlanet.dom.next.getAttribute('id').replace('planet-', '') : this.ogl.currentPlanet.dom.nextWithMoon.querySelector('.moonlink').getAttribute('href').match(/cp=(\d+)/)[1];
 
-            this.ogl.prevRedirection = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&cp=${prevID}&oglmode=5`;
-            this.ogl.nextRedirection = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&cp=${nextID}&oglmode=5`;
+            this.ogl.prevRedirection = `?page=ingame&component=fleetdispatch&cp=${prevID}&oglmode=5`;
+            this.ogl.nextRedirection = `?page=ingame&component=fleetdispatch&cp=${nextID}&oglmode=5`;
         }
 
         if(sourceCoords == nextCoords || (nextCoords == destCoords && sourceCoords == nextNextCoords && this.ogl.db.harvestCoords?.source?.type == this.ogl.db.harvestCoords?.destination?.type))
         {
             this.ogl.db.harvestCoords = undefined;
-            this.ogl.nextRedirection = `https://${window.location.host}/game/index.php?page=ingame&component=overview&cp=${nextID}`;
+            this.ogl.nextRedirection = `?page=ingame&component=overview&cp=${nextID}`;
         }
 
         this.redirectionReady = true;
@@ -5208,7 +5218,7 @@ class GalaxyManager extends Manager
         const page = Math.max(1, Math.ceil(player.score.globalRanking / 100));
 
         this.ogl._ui.turnIntoPlayerLink(player.uid, row.querySelector('.cellPlayerName [class*="status_abbr"]'), player.name);
-        Util.addDom('a', { class:'ogl_ranking', parent:row.querySelector('.cellPlayerName'), href:`https://${window.location.host}/game/index.php?page=highscore&site=${page}&searchRelId=${player.uid}`, child:'#'+player.score.globalRanking });
+        Util.addDom('a', { class:'ogl_ranking', parent:row.querySelector('.cellPlayerName'), href:`?page=highscore&site=${page}&searchRelId=${player.uid}`, child:'#'+player.score.globalRanking });
 
         if(!isOwn)
         {
@@ -6538,8 +6548,8 @@ class MessageManager extends Manager
                     <span class="ogl_activity ogl_textCenter">${report.activity < 15 ? '*' : report.activity}</span>
                     <span class="ogl_type"></span>
                     <span class="ogl_destination"><span data-galaxy="${report.coords.join(':')}">${report.coords.join(':')}</span></span>
-                    <a class="${report.status} tooltip overlay" data-title="${report.name}" href="https://${window.location.host}/game/index.php?page=messages&messageId=${report.id}&tabid=20&ajax=1">${report.name}</a>
-                    <a class="ogl_reportTotal ogl_textRight tooltip" data-title="${ogl._lang.find(this.ogl.db.options.defaultShip)}: ${Util.formatNumber(requiredShips)}<div class='ogl_sidenote'>+4.2% cargo per hour since the spy</div>" href="https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.typeID}&mission=1&am${this.ogl.db.options.defaultShip}=${requiredShips}&oglmode=4" data-value="${report.total}">${Util.formatToUnits(report.total)}</a>
+                    <a class="${report.status} tooltip overlay" data-title="${report.name}" href="${window.location.protocol}//${window.location.host}${window.location.pathname}?page=messages&messageId=${report.id}&tabid=20&ajax=1">${report.name}</a>
+                    <a class="ogl_reportTotal ogl_textRight tooltip" data-title="${ogl._lang.find(this.ogl.db.options.defaultShip)}: ${Util.formatNumber(requiredShips)}<div class='ogl_sidenote'>+4.2% cargo per hour since the spy</div>" href="?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.typeID}&mission=1&am${this.ogl.db.options.defaultShip}=${requiredShips}&oglmode=4" data-value="${report.total}">${Util.formatToUnits(report.total)}</a>
                     <span class="ogl_reportFleet ogl_textRight" data-value="${report.fleet}" style="${report.fleet != 0 ? 'background:linear-gradient(192deg, #622a2a, #3c1717 70%)' : ''}">${report.fleet >= 0 ? Util.formatToUnits(report.fleet, 0) : '?'}</span>
                     <span class="ogl_textRight" style="${report.def != 0 ? 'background:linear-gradient(192deg, #622a2a, #3c1717 70%)' : ''}">${report.def >= 0 ? Util.formatToUnits(report.def, 0) : '?'}</span>
                     <span class="ogl_actions"></span>
@@ -6578,7 +6588,7 @@ class MessageManager extends Manager
                 class:'ogl_button material-icons msg_action_link overlay',
                 parent:div.querySelector('.ogl_actions'),
                 child:'expand_content',
-                href:`https://${window.location.host}/game/index.php?page=messages&messageId=${report.id}&tabid=20&ajax=1`
+                href:`?page=messages&messageId=${report.id}&tabid=20&ajax=1`
             });*/
 
             // more action
@@ -6621,7 +6631,7 @@ class MessageManager extends Manager
                                     class:`ogl_icon ogl_${shipID}`,
                                     parent:subLine,
                                     child:shipsCount.toLocaleString('de-DE') || '0',
-                                    href:`https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.typeID}&mission=1&am${shipID}=${shipsCount}&oglmode=4&oglLazy=true`
+                                    href:`?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.typeID}&mission=1&am${shipID}=${shipsCount}&oglmode=4&oglLazy=true`
                                 });
                             });
 
@@ -6638,7 +6648,7 @@ class MessageManager extends Manager
                 class:'ogl_button material-icons',
                 parent:div.querySelector('.ogl_actions'),
                 child:'target',
-                href:`https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.typeID}&mission=1`
+                href:`?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.typeID}&mission=1`
                 //onclick:() => document.querySelector(`.msg[data-msg-id="${report.id}"] .icon_attack`).click()
             });
             if(report.attacked) attackBtn.classList.add('ogl_mission1');
@@ -6715,7 +6725,7 @@ class MessageManager extends Manager
             {
                 this.ogl._fetch.pending.push(
                 {
-                    url:`https://${window.location.host}/game/index.php?page=messages&messageId=${id}&tabid=21&ajax=1`,
+                    url:`?page=messages&messageId=${id}&tabid=21&ajax=1`,
                     callback:data =>
                     {
                         const result = JSON.parse(data.match(/{(.*)}/g));
@@ -7957,7 +7967,7 @@ class ShortcutManager extends Manager
                     const report = this.ogl._message.nextTarget;
                     const shipsCount = this.ogl._fleet.shipsForResources(false, Math.round(report.total * 1.07)); // 7% more resources
 
-                    window.location.href = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.type == 3 ? 3 : 1}&mission=1&am${this.ogl.db.options.defaultShip}=${shipsCount}&oglmode=4&oglmsg=${report.id}`;
+                    window.location.href = `?page=ingame&component=fleetdispatch&galaxy=${report.coords[0]}&system=${report.coords[1]}&position=${report.coords[2]}&type=${report.type == 3 ? 3 : 1}&mission=1&am${this.ogl.db.options.defaultShip}=${shipsCount}&oglmode=4&oglmsg=${report.id}`;
                 }
             });
         }
@@ -8673,7 +8683,7 @@ class TechManager extends Manager
             updateFooter(footer, content, cumul);
         });
 
-        let url = `https://${window.location.host}/game/index.php?page=ingame&component=fleetdispatch&galaxy=${splitted[0]}&system=${splitted[1]}&position=${splitted[2]}&oglmode=3&targetid=${id}&type=${splitted[3]}`;
+        let url = `?page=ingame&component=fleetdispatch&galaxy=${splitted[0]}&system=${splitted[1]}&position=${splitted[2]}&oglmode=3&targetid=${id}&type=${splitted[3]}`;
 
         let sendButton = Util.addDom('button', { class:'ogl_button ogl_disabled', parent:rightDiv, child:'Send selection <i class="material-icons">cube-send</i>', onclick:() =>
         {
@@ -9798,7 +9808,7 @@ class EmpireManager extends Manager
 
         if(this.ogl.page != 'empire') return;
 
-        unsafeWindow.jumpGateLink = `https://${window.location.host}/game/index.php?page=ajax&component=jumpgate&overlay=1&ajax=1`;
+        unsafeWindow.jumpGateLink = `?page=ajax&component=jumpgate&overlay=1&ajax=1`;
         unsafeWindow.jumpGateLoca = { LOCA_STATION_JUMPGATE_HEADLINE: 'Jumpgate' };
 
         let updateDone = false;
@@ -11836,7 +11846,7 @@ time span
 #fleet1 progress
 {
     appearance:none;
-	border:0;
+    border:0;
     bottom:-5px;
     display:block;
     height:5px;
