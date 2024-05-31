@@ -1413,7 +1413,7 @@ class UIManager extends Manager {
     if (document.querySelector("#stat_list_content").setAttribute("data-category", currentCategory), document.querySelector("#stat_list_content").setAttribute("data-type", currentType), 1 != currentCategory || !e[currentType]) return;
     const t = JSON.parse(localStorage.getItem(`${window.location.host}_highscore`) || "{}");
     0 == currentType && Util.runAsync((() => this.displayScoreDiff(t))), (!t.timestamps?.[e[currentType]] || serverTime.getTime() - t.timestamps?.[e[currentType]] > 1728e5) && this.ogl._fetch.pending.push({
-      url: `https://${window.location.host}/api/highscore.xml?category=${currentCategory}&type=${currentType}`,
+      url:`${PROTOCOL}//${HOST}/api/s${universeNum}/${lang}/highscore.xml?category=${currentCategory}&type=${currentType}`,
       callback: n => {
         console.log(`ranking ${e[currentType]} score fetched`), t.timestamps = t.timestamps || {};
         let o = (new DOMParser).parseFromString(n, "text/html");
