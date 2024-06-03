@@ -3782,7 +3782,7 @@ class MessageManager extends Manager {
       child: e.playerName,
       parent: d,
       class: "overlay",
-      href: `?page=componentOnly&component=messagedetails&messageId=${e.id}`
+      href: `${window.location.protocol}//${window.location.host}${window.location.pathname}?page=componentOnly&component=messagedetails&messageId=${e.id}`
     });
     const b = Util.addDom("a", {
         child: Util.formatToUnits(e.wave1),
