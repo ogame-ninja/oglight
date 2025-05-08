@@ -25,6 +25,8 @@
 	const UNIVERSE = "s" + universeNum + "-" + lang;
 	const PROTOCOL = window.location.protocol;
 	const HOST = window.location.host;
+	const PLAYER_ID = document.querySelector("meta[name=ogame-player-id]").content;
+	const localStoragePrefix = UNIVERSE + "-" + PLAYER_ID + "-";
 
 let oglRedirection = localStorage.getItem("ogl-redirect");
 
@@ -174,7 +176,7 @@ class OGLight {
             energy: "energy",
             darkmatter: "darkmatter"
         }, this.shipsList = [ 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 213, 214, 215, 218, 219 ], 
-        this.fretShips = [ 202, 203, 209, 210, 219 ], this.ptreKey = localStorage.getItem("ogl-ptreTK") || !1, 
+        this.fretShips = [ 202, 203, 209, 210, 219 ], this.ptreKey = localStorage.getItem(localStoragePrefix+"ogl-ptreTK") || !1, 
         this.planetType = document.querySelector('head meta[name="ogame-planet-type"]').getAttribute("content"), 
         this.flagsList = [ "friend", "rush", "danger", "skull", "fridge", "star", "trade", "money", "ptre", "none" ], 
         this.server = {}, this.server.id=document.querySelector('head meta[name="ogame-universe"]').getAttribute('content').replace(/\D/g,""), 
@@ -2360,11 +2362,11 @@ class TopbarManager extends Manager {
                 let input = Util.addDom("input", {
                     type: "password",
                     placeholder: "TM-XXXX-XXXX-XXXX-XXXX",
-                    value: localStorage.getItem("ogl-ptreTK") || "",
+                    value: localStorage.getItem(localStoragePrefix+"ogl-ptreTK") || "",
                     parent: label,
                     oninput: () => {
                         !input.value || 18 == input.value.replace(/-/g, "").length && 0 == input.value.indexOf("TM") ? (input.classList.remove("ogl_danger"), 
-                        localStorage.setItem("ogl-ptreTK", input.value), this.ogl.ptreKey = input.value) : input.classList.add("ogl_danger");
+                        localStorage.setItem(localStoragePrefix+"ogl-ptreTK", input.value), this.ogl.ptreKey = input.value) : input.classList.add("ogl_danger");
                     },
                     onfocus: () => input.type = "text",
                     onblur: () => input.type = "password"
